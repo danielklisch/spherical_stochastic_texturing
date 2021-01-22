@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stochastic Spherical Texturing</title>
+<link rel="stylesheet" href="style.css" type="text/css">
+</head>
+
+<body>
+<div class="row">
+    <div class="column">
+        <label>Content Source:</label><br />
+        <input type="file" id="image_loader_content"/><br />
+        <div id="container_content">
+            <canvas id="canvas_content"></canvas><br />
+        </div>
+        <div id="space_content" height="100px"></div>
+    </div>
+    <div class="column">
+        <br/>
+        <div style="height:4px;"></div>
+        <label height="10px">Result:</label><br />
+        <div id="container_result">
+            <canvas id="canvas_result"></canvas><br />
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="column" style="width:17%;">
+        <div id="container_inputs" width="100px">
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Target Width:  <input type="number" value="256" id="input_width">
+            </div>
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Target Height:  <input type="number" value="128" id="input_height">
+            </div>
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Random Seed:  <input type="number" value="0" id="input_seed">
+            </div>            
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Noise Octaves:  <input type="number" value="1" id="input_octaves">
+            </div> 
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Texture Scale:  <input type="number" value="0.1" id="input_scale">
+            </div> 
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Grid Scale:  <input type="number" value="1" id="input_grid">
+            </div> 
+            <div style="margin:1px; display: flex; justify-content: space-around">
+                Match Histogram:  <input type="checkbox" value="histogram" id="input_histogram">
+            </div>             
+        </div>   
+        <button type="button" onclick="apply()">Apply</button> <label id="label_progress">ready</label> <br />
+        <label>Histogram Channel Order:</label><br/>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_rgb" name="order" value="rgb" checked="true" style="width:40px;">
+            <label>RGB</label><br/>
+        </div>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_rbg" name="order" value="rbg" style="width:50%;">
+            <label>RBG</label><br/>
+        </div>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_grb" name="order" value="grb" style="width:50%;">
+            <label>GRB</label><br/>
+        </div>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_gbr" name="order" value="gbr" style="width:50%;">
+            <label>GBR</label><br/>
+        </div>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_brg" name="order" value="brg" style="width:50%;">
+            <label>BRG</label><br/>
+        </div>
+        <div class="column" style="width:16.5%;">
+            <input type="radio" id="radio_bgr" name="order" value="bgr" style="width:50%;">
+            <label>BGR</label><br/>
+        </div>
+    </div>
+</div>
+</body>
+
+<script src="histogram_transfer.js"></script>
+<script src="stochastic_spherical_texture.js"></script>
+<script>
+document.getElementById('image_loader_content').addEventListener('change', load_content, false);
+var image_content = 0
+var canvas_content = document.getElementById('canvas_content');
+var context_content = canvas_content.getContext('2d');
+
+var canvas_result = document.getElementById('canvas_result');
+var context_result = canvas_result.getContext('2d');
+
+var data_content = 0;
+var calculator = 0;
+var channel_order = [0,1,2];
+
+var _Seed = 0;
+var _Octaves = 0;
+var _Scale = 0;
+var _Grid = 0;
+
+function load_content(e){
+    var reader = new FileReader();
+    reader.onload = function(event){
+        var img = new Image();
+        img.onload = function(){
+            canvas_content.width = img.width;
+            canvas_content.height = img.height;
+            var scale = 0.32*window.screen.width/img.width;
+            document.getElementById('container_content').style.transform = "matrix("+scale+", 0, 0, "+scale+", 0, 0)"; 
+            document.getElementById('container_content').style.width = Math.min(scale,1)*img.width+"px";
+            document.getElementById('container_content').style.height = Math.min(scale,1)*img.height+"px";
+            document.getElementById('space_content').style.height = Math.max(scale-1,0)*img.height+"px";
+            context_content.drawImage(img,0,0);
+            image_content = img;
+        }
+        img.src = event.target.result;
+    }
+    reader.readAsDataURL(e.target.files[0]);     
+}
+
+function* calculate() {
+    var image_data_result = context_result.getImageData(0, 0, canvas_result.width, canvas_result.height);
+    var data_result = image_data_result.data;   
+    data_content = context_content.getImageData(0, 0, canvas_content.width, canvas_content.height).data;
+
+    var LastYieldTime = performance.now();
+    for(var y=0;y<canvas_result.height;y++) {
+        for(var x=0;x<canvas_result.width;x++) {
+            var c = color_pixel(x,y);
+            data_result[(canvas_result.width*y+x)*4+0] = Math.round(c[0]*255);
+            data_result[(canvas_result.width*y+x)*4+1] = Math.round(c[1]*255);
+            data_result[(canvas_result.width*y+x)*4+2] = Math.round(c[2]*255);
+            data_result[(canvas_result.width*y+x)*4+3] = 255;
+        }   
+        if (performance.now()-LastYieldTime>100) {
+            document.getElementById('label_progress').innerHTML = Math.round(y*100/canvas_result.height)+"%";
+            yield; 
+            LastYieldTime = performance.now();
+        }        
+    }    
+    
+    if (document.getElementById("input_histogram").checked) {
+        document.getElementById('label_progress').innerHTML = "building content histogram...";
+        yield;
+        histogram_content = make_histogram(data_result,canvas_result.width, canvas_result.height);
+        document.getElementById('label_progress').innerHTML = "building content cdfs...";
+        yield;
+        cdfs_content = make_cdfs(histogram_content);
+        document.getElementById('label_progress').innerHTML = "building target histogram...";
+        yield;
+        histogram_target = make_histogram(data_content,canvas_content.width, canvas_content.height);    
+        document.getElementById('label_progress').innerHTML = "transforming content...";
+        yield;
+        transform_image(data_result,canvas_result.width, canvas_result.height,cdfs_content,histogram_target);
+    }
+    
+    image_data_result.data = data_result;
+    context_result.putImageData(image_data_result, 0, 0);
+    document.getElementById('label_progress').innerHTML = "done";
+}
+
+function timeoutLoop() {
+    calculator.next();
+    if (document.getElementById('label_progress').innerHTML != "done") {
+        setTimeout(timeoutLoop, 1);
+    }
+}
+
+function apply() {
+    if (document.getElementById('label_progress').innerHTML == "ready" || document.getElementById('label_progress').innerHTML == "done") {
+        canvas_result.width = document.getElementById("input_width").value;
+        canvas_result.height = document.getElementById("input_height").value;   
+        
+        _Seed = parseFloat(document.getElementById("input_seed").value);
+        _Octaves = parseFloat(document.getElementById("input_octaves").value);
+        _Scale = parseFloat(document.getElementById("input_scale").value);
+        _Grid = parseFloat(document.getElementById("input_grid").value);
+        
+        if (document.getElementById("radio_rgb").checked) channel_order = [0,1,2];
+        if (document.getElementById("radio_rbg").checked) channel_order = [0,2,1];
+        if (document.getElementById("radio_grb").checked) channel_order = [1,0,2];
+        if (document.getElementById("radio_gbr").checked) channel_order = [1,2,0];
+        if (document.getElementById("radio_brg").checked) channel_order = [2,0,1];
+        if (document.getElementById("radio_bgr").checked) channel_order = [2,1,0];
+        
+        var scale = 0.64*window.screen.width/canvas_result.width;
+        document.getElementById('container_result').style.transform = "matrix("+scale+", 0, 0, "+scale+", 0, 0)"; 
+        document.getElementById('container_result').style.height = "0px";
+        //context_result.drawImage(image_content,0,0);    
+        calculator = calculate();
+        setTimeout(timeoutLoop, 100);
+    }
+}
+</script>
+</html>
