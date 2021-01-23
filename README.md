@@ -21,8 +21,15 @@ It can also be used to generate random variations from a single input:
 
 <img src='figures/figure5.png'/>
 
+To generate high resolution detail Spherical Stochastic Texturing can be blended at different scales in a similar way to [fractal noise](https://thebookofshaders.com/13/).
+The "Noise Octaves" parameter controls how many times Spherical Stochastic Texturing is applied at different scales:
+
+<img src='figures/figure6.png'/>
+
+<img src='figures/figure7.png'/>
+
 For the first examples textures from [shadertoy](https://www.shadertoy.com/view/tdSSzV) were used.
-The [map of the moon](https://trek.nasa.gov/moon/) came from NASA.
+The maps of [mars](https://trek.nasa.gov/mars/) and the [moon](https://trek.nasa.gov/moon/) came from NASA.
 
 ## How It Works
 
