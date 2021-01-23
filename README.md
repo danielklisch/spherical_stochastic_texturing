@@ -1,6 +1,6 @@
 # Spherical Stochastic Texturing
 
-<img src='imgs/figure1.png'/>
+<img src='figures/figure1.png'/>
 
 This algorithm generates random textures for spheres from example inputs.
 It was inspired by [Procedural Stochastic Texturing](https://github.com/UnityLabs/procedural-stochastic-texturing).
@@ -11,15 +11,15 @@ You can try out the web demo [here](https://danielklisch.github.io/spherical_sto
 
 Spherical Stochastic Texturing can be used to seamlessly project textures onto spheres:
 
-<img src='imgs/figure2.png'/>
+<img src='figures/figure2.png'/>
 
 It can also be used to generate random variations from a single input:
 
-<img src='imgs/figure3.png'/>
+<img src='figures/figure3.png'/>
 
-<img src='imgs/figure4.png'/>
+<img src='figures/figure4.png'/>
 
-<img src='imgs/figure5.png'/>
+<img src='figures/figure5.png'/>
 
 For the first examples textures from [shadertoy](https://www.shadertoy.com/view/tdSSzV) were used.
 The [map of the moon](https://trek.nasa.gov/moon/) came from NASA.
